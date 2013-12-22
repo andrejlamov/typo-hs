@@ -8,6 +8,8 @@ data Side = Left | Right deriving (Eq, Show)
 data FingerName = Thumb | Index | Middle | Ring | Little deriving (Eq, Show)
 data Finger = Finger FingerName Side deriving (Eq, Show)
 
+type Keys = String
+
 allFingers :: [Finger]
 allFingers = concat $
              map (\side -> map (\finger -> Finger finger side) fingers) sides
@@ -19,8 +21,8 @@ pair fingers = concat $ pair' fingers
     where pair' (f:[]) = []
           pair' (f:fs) = map (\f' -> [f, f']) fs : pair' fs
 
-fingerToChars :: Finger -> String
-fingerToChars f = case f of
+fingerToKeys :: Finger -> Keys
+fingerToKeys f = case f of
                     Finger Index Typo.Left   -> "rfvcbgt"
                     Finger Middle Typo.Left  -> "edx"
                     Finger Ring Typo.Left    -> "wsz"
@@ -31,27 +33,27 @@ fingerToChars f = case f of
                     Finger Little Typo.Right -> "pö-åä'-"
                     Finger Thumb _           -> ""
 
-fingersToChars :: [[Finger]] -> [[String]]
-fingersToChars fingers = map (\fl -> map fingerToChars fl) fingers
+fingergroupsToKeys :: [[Finger]] -> [[Keys]]
+fingergroupsToKeys fingers = map (\fl -> map fingerToKeys fl) fingers
 
-genWord :: Int -> String -> IO String
-genWord maxWordLen chars =
-    do len <- getStdRandom (randomR (1, maxWordLen))
-       genWord' len (Vector.fromList chars) ""
+genWord :: Int -> Int -> Keys -> IO Keys
+genWord minWordLen maxWordLen chars =
+    do maxWordLen' <- getStdRandom (randomR (minWordLen, maxWordLen))
+       genWord' maxWordLen' (Vector.fromList chars) ""
     where
-      genWord' :: Int -> Vector.Vector Char -> String -> IO String
+      genWord' :: Int -> Vector.Vector Char -> Keys -> IO Keys
       genWord' 0       _     res = do return res
       genWord' wordLen chars res =
           do idxR <- getStdRandom (randomR (0, Vector.length chars - 1))
              let c = chars Vector.! idxR
              genWord' (wordLen - 1) chars (c:res)
 
-question :: Int -> Int -> [String] -> IO ()
+question :: Int -> Int -> [Keys] -> IO ()
 question _     _    []             = do putStrLn "You are done!"
 question limit 0    (chars:chars') = question limit limit chars'
 question limit left s@(chars:chars') =
     do
-      word <- genWord 10 chars
+      word <- genWord 5 10 chars
       question' word
       where
         question' word =
@@ -64,5 +66,5 @@ question limit left s@(chars:chars') =
 
 main:: IO ()
 main = do
-  let chars = map concat $ fingersToChars $ pair $ allFingers
+  let chars = map concat $ fingergroupsToKeys $ pair $ allFingers
   question 5 5 chars

@@ -8,7 +8,8 @@ data Side = Left | Right deriving (Eq, Show)
 data FingerName = Thumb | Index | Middle | Ring | Little deriving (Eq, Show)
 data Finger = Finger FingerName Side deriving (Eq, Show)
 
-type Keys = String
+type Key  = Char
+type Keys = [Key]
 
 allFingers :: [Finger]
 allFingers = concat $
@@ -37,23 +38,23 @@ fingergroupsToKeys :: [[Finger]] -> [[Keys]]
 fingergroupsToKeys fingers = map (\fl -> map fingerToKeys fl) fingers
 
 genWord :: Int -> Int -> Keys -> IO Keys
-genWord minWordLen maxWordLen chars =
+genWord minWordLen maxWordLen keys =
     do maxWordLen' <- getStdRandom (randomR (minWordLen, maxWordLen))
-       genWord' maxWordLen' (Vector.fromList chars) ""
+       genWord' maxWordLen' (Vector.fromList keys) ""
     where
-      genWord' :: Int -> Vector.Vector Char -> Keys -> IO Keys
-      genWord' 0       _     res = do return res
-      genWord' wordLen chars res =
-          do idxR <- getStdRandom (randomR (0, Vector.length chars - 1))
-             let c = chars Vector.! idxR
-             genWord' (wordLen - 1) chars (c:res)
+      genWord' :: Int -> Vector.Vector Key -> Keys -> IO Keys
+      genWord' 0       _    res = do return res
+      genWord' wordLen keys res =
+          do idxR <- getStdRandom (randomR (0, Vector.length keys - 1))
+             let k = keys Vector.! idxR
+             genWord' (wordLen - 1) keys (k:res)
 
 question :: Int -> Int -> [Keys] -> IO ()
 question _     _    []             = do putStrLn "You are done!"
-question limit 0    (chars:chars') = question limit limit chars'
-question limit left s@(chars:chars') =
+question limit 0    (keys:keys') = question limit limit keys'
+question limit left keygroups@(keys:keys') =
     do
-      word <- genWord 5 10 chars
+      word <- genWord 5 10 keys
       question' word
       where
         question' word =
@@ -61,10 +62,14 @@ question limit left s@(chars:chars') =
               putStrLn $ "Type: " ++ word
               l <- getLine
               if l == word
-              then question limit (left - 1) s
+              then question  limit (left - 1) keygroups
               else question' word
 
 main:: IO ()
 main = do
-  let chars = map concat $ fingergroupsToKeys $ pair $ allFingers
-  question 5 5 chars
+  let keys = map concat $ fingergroupsToKeys $ pair $ allFingers
+  question 5 5 keys
+
+
+
+
